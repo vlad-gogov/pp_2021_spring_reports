@@ -1,4 +1,4 @@
-[![Build status](https://ci.appveyor.com/api/projects/status/5hies4gp7lyrxs8n/branch/master?svg=true)](https://ci.appveyor.com/project/allnes/programming-course-reports/branch/master)
+[![Build status](https://ci.appveyor.com/api/projects/status/o8inlqw63nltlm97/branch/master?svg=true)](https://ci.appveyor.com/project/allnes/pp-2021-spring-reports/branch/master)
 ![Build application](https://github.com/allnes/pp_2021_spring_reports/workflows/Build%20application/badge.svg?branch=master)
 
 # Programming Course Reports
