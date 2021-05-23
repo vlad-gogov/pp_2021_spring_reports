@@ -1,0 +1,859 @@
+\documentclass{report}
+
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{luainputenc}
+\usepackage[english, russian]{babel}
+\usepackage[pdftex]{hyperref}
+\usepackage[14pt]{extsizes}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{indentfirst}
+\usepackage{amsmath}
+
+
+\geometry{a4paper,top=2cm,bottom=3cm,left=2cm,right=1.5cm}
+\setlength{\parskip}{0.5cm}
+\setlist{nolistsep, itemsep=0.3cm,parsep=0pt}
+
+\lstset{language=C++,
+		basicstyle=\footnotesize,
+		keywordstyle=\color{blue}\ttfamily,
+		stringstyle=\color{red}\ttfamily,
+		commentstyle=\color{green}\ttfamily,
+		morecomment=[l][\color{magenta}]{\#}, 
+		tabsize=4,
+		breaklines=true,
+  		breakatwhitespace=true,
+  		title=\lstname,       
+}
+
+\makeatletter
+\renewcommand\@biblabel[1]{#1.\hfil}
+\makeatother
+
+\begin{document}
+
+\begin{titlepage}
+
+\begin{center}
+Министерство науки и высшего образования Российской Федерации
+\end{center}
+
+\begin{center}
+Федеральное государственное автономное образовательное учреждение высшего образования \\
+Национальный исследовательский Нижегородский государственный университет им. Н.И. Лобачевского
+\end{center}
+
+\begin{center}
+Институт информационных технологий, математики и механики
+\end{center}
+
+\vspace{4em}
+
+\begin{center}
+\textbf{\LargeОтчет по лабораторной работе} \\
+\end{center}
+\begin{center}
+\textbf{\Large«Построение выпуклой оболочки – проход Джарвиса»} \\
+\end{center}
+
+\vspace{4em}
+
+\newbox{\lbox}
+\savebox{\lbox}{\hbox{text}}
+\newlength{\maxl}
+\setlength{\maxl}{\wd\lbox}
+\hfill\parbox{7cm}{
+\hspace*{5cm}\hspace*{-5cm}\textbf{Выполнил:} \\ студент группы 381806-1 \\ Гогов В. И.\\
+\\
+\hspace*{5cm}\hspace*{-5cm}\textbf{Проверил:}\\ доцент кафедры МОСТ, \\ кандидат технических наук \\ Сысоев А. В.\\
+}
+\vspace{\fill}
+
+\begin{center} Нижний Новгород \\ 2021 \end{center}
+
+\end{titlepage}
+
+\setcounter{page}{2}
+
+% Содержание
+\tableofcontents
+\newpage
+
+% Введение
+\section*{Введение}
+\addcontentsline{toc}{section}{Введение}
+Вычислительная геометрия - раздел информатики, посвященный изучению алгоритмов что можно сформулировать в терминах геометрии. Некоторые чисто геометрические проблемы возникают при изучении вычислительных геометрических алгоритмов , и такие проблемы также считаются частью вычислительной геометрии. Задача построения выпуклых оболочек, является одной из центральных задач вычислительной геометрии. Важность этой задачи происходит не только из-за огромного коли-чества приложений (в распознавании образов, обработке изображений, базахданных, в задаче раскроя и компоновки материалов, математической статистике), но также и из-за полезности выпуклой оболочки как инструментарешения множества задач вычислительной геометрии.
+
+\par Выпуклые оболочки очень важны в ряде геометрических положений не только сами по себе, но и как части других алгоритмов, использующих построение выпуклой оболочки в качестве элементарной операции.
+
+\par Для практических целей выпуклые оболочки полезны тем, что они компактно хранят всю необходимую информацию о множестве точек, что позволяет быстро отвечать на разнообразные запросы на этом множестве.
+
+\par Джарвис обратил внимание на то, что многоугольник, которым является выпуклая оболочка, с одинаковым успехом можно задать упорядоченным множеством,
+как его ребер, так и его вершин. Если задано множество точек, то довольно трудно быстро
+определить, является или нет некоторая точка крайней. Однако если даны две точки, то непосредственно можно проверить, является или нет соединяющий их отрезок ребром выпуклой оболочки. 
+
+\newpage
+
+% Постановка задачи
+\section*{Постановка задачи}
+\addcontentsline{toc}{section}{Постановка задачи}
+В рамках лабораторной работы нужно реализовать алгоритм построениявыпуклой оболочки - проход Джарвиса.
+
+\par Требуется выполнить следующее:
+
+\begin{enumerate}
+\item Изучить и реализовать последовательный алгоритм Джарвиса.
+\item Разработать и реализовать параллельный алгоритм Джарвиса с использованием технологий OpenMP, TBB.
+\item Проверить корректность работы алгоритмов с помощью тестов, созданных с использованием Google C++ Testing Framework.
+\item Провести вычислительные эксперименты и сделать выводы.
+\end{enumerate}
+\newpage
+
+% Метод решения
+\section*{Метод решения}
+\addcontentsline{toc}{section}{Метод решения}
+\textbf{Выпуклое множество} — такое множество точек, что, для любых двух точек множества, все точки на отрезке между ними тоже принадлежат этому множеству.
+
+\par \textbf{Выпуклая оболочка множества точек} — такое выпуклое множество точек, что все точки фигуры также лежат в нем.
+
+\par \textbf{Минимальная выпуклая оболочка множества точек (МВО)} — это минимальная по площади выпуклая оболочка.
+
+Пусть дано множество точек $P=\{\,p_1, p_2, ..., p_n\}$. В качестве начальной берётся самая левая нижняя точка $p_1$ (её можно найти за $O(n)$ обычным проходом по всем точкам), она точно является вершиной выпуклой оболочки. Следующей точкой  $p_2$ берём такую точку, которая имеет наименьший положительный полярный угол относительно точки $p_1$, как начала координат. После этого для каждой точки $p_i$, где $(2<i<=|P|)$, против часовой стрелки ищется такая точка $p_{i+1}$, путём нахождения за $O(n)$ среди оставшихся точек (+ самая левая нижняя), в которой будет образовываться наибольший угол между прямыми $p_{i-1} p_i$ и $p_{i}p_{i+1}$. Она и будет следующей вершиной выпуклой оболочки. Сам угол при этом не ищется, а ищется только его косинус через скалярное произведение между лучами  $p_{i-1}p_{i}$ и $p_{i}p'_{i+1}$, где  $p_{i}$ — последний найденный минимум,  $p_{i-1}$ — предыдущий минимум(претедент), а $p'_{i+1}$ — претендент на следующий минимум. Новым минимумом будет та точка, в которой косинус будет принимать наименьшее значение (чем меньше косинус, тем больше его угол). Нахождение вершин выпуклой оболочки продолжается до тех пор, пока $p_{i+1}\neq p_{1}$. В тот момент, когда следующая точка в выпуклой оболочке совпала с первой, алгоритм останавливается — выпуклая оболочка построена.
+
+\par Суммарная сложность алгоритма: O(n*h), где h - количество точек МВО.
+
+\newpage
+
+% Схема распараллеливания
+\section*{Схема распараллеливания}
+\addcontentsline{toc}{section}{Схема распараллеливания}
+Рассмотрим реализацию алгоритма Джарвиса с точки зрения задачи параллелизации вычислений.
+
+\par Для распараллеливания алгоритма построения выпуклой оболочки необходимо разделить изначальный массив точек на блоки. Количество блоков равно числу потоков. Если размер изначального массива не делится нацело на число потоков, то останутся точки которые не войдут в блок, их количество равно остатку от деления. Для решения этой проблемы учитываем эти точки в блоке последнего потока. Каждый поток ищет свою локальную точку и после завершения работы потока она сравнивается с точкой главного потока. В итоге отбирается одна точка для следующей итерации.
+
+\par Рассмотрим реализацию поэтапно:
+
+\par 1. Распараллеливаем поиск первой точки - цикл по всем точкам.
+\par 2. Распараллеливаем поиск следующей точки - цикл по всем точкам.
+
+\newpage
+
+% Описание программной реализации
+\section*{Описание программной реализации}
+\addcontentsline{toc}{section}{Описание программной реализации}
+Множество точек в программе выглядит как вектор пар значений - {($x_{1}$, $y_{1}$), ($x_{2}$, $y_{2}$), ..., ($x_{n}$, $y_{n}$)}.
+
+\begin{lstlisting}
+	Point = std::pair<int64_t, int64_t>;
+\end{lstlisting}
+В программе используются функции, представленные ниже.
+\par Последовательный алгоритм Джарвиса реализован в следующей функции:
+\begin{lstlisting}
+std::vector<Point> jarvisAlgorithmSeq(const std::vector<Point>& points);
+\end{lstlisting}
+\par В качестве входного параметра передается ссылка на неизменяемый вектор точек. Выходными данными является вектор, содережащий минимальную выпуклую оболчку.
+\par Реализация параллельного алгоритма Джарвиса представлена в функциях:
+\begin{lstlisting}
+std::vector<Point> jarvisAlgorithmOmp(const std::vector<Point>& points);
+std::vector<Point> jarvisAlgorithmTbb(const std::vector<Point>& points);
+\end{lstlisting}
+\par В качестве входного параметра передается ссылка на неизменяемый вектор точек. Выходными данными является вектор, содережащий минимальную выпуклую оболчку.
+
+\newpage
+
+% Подтверждение корректности
+\section*{Подтверждение корректности}
+\addcontentsline{toc}{section}{Подтверждение корректности}
+Для подтверждения корректности в программе представлен набор тестов, разработанных с Google Testing Framework.
+\par Набор представляет из себя тесты, которые проверяют корректность вычислений (сравниваются вектора точек, полученные из последовательного и параллельного алгоритма), а также эффективность (время занимаемое последовательным и параллельным алгоритмом Джарвиса и сравнение полученных данных).
+
+\par Успешное прохождение всех тестов подтверждает корректность работы написанной программы.
+
+\par Дополнительно для подтверждения корректности в программе реализована демонстрация работы алгоритма визуально с использованием библиотеки OpenCV.
+\newpage
+
+% Результаты экспериментов
+\section*{Результаты экспериментов}
+\addcontentsline{toc}{section}{Результаты экспериментов}
+Вычислительные эксперименты для оценки эффективности параллельного алгоритма Джарвиса проводились на оборудовании со следующей аппаратной конфигурацией:
+
+\begin{itemize}
+\item Процессор: Intel Core i3-7130U, 2.70 GHz, 2 ядра;
+\item Оперативная память: 8192 МБ;
+\item ОС: Майкрософт Windows 10 Pro.
+\end{itemize}
+
+\par В рамках эксперимента было вычислено время работы параллельного и последовательно алгоритмов построения минимальной выпуклой оболочки на точках, лежащих в пределах от 0 до 1000 по X и Y. Количество точек \verb|1000000| , \verb|10000000| и \verb|500000000|. Тесты запускались на двух потоках.
+\par Результаты экспериментов представлены ниже.
+
+\begin{table}[!h]
+\caption{Результаты экспериментов. Сравнение с OpenMP.}
+\centering
+\begin{tabular}{lllll}
+Количество точек & Последовательно & Параллельно & Ускорение  \\
+1000000        & 0.233         & 0.1     & 2.3       \\
+10000000        & 1.862         & 0.782     & 2.38       \\
+50000000       & 9.132         & 3.794     & 2.4       
+\end{tabular}
+\end{table}
+
+\begin{table}[!h]
+\caption{Результаты экспериментов. Сравнение с TBB.}
+\centering
+\begin{tabular}{lllll}
+Количество точек & Последовательно & Параллельно & Ускорение  \\
+1000000        & 	0.254         & 0.117     & 	2.17       \\
+10000000        & 1.771         & 0.687     & 2.57       \\
+50000000       & 8.89         & 3.402     & 2.61       
+\end{tabular}
+\end{table}
+
+\par По данным экспериментов можно сделать вывод, что параллельный алгоритм работает намного быстрее, чем последовательный. Как видно из таблиц полученное ускорение больше чем ассимтотическое ускорение (равное число потоков), скорее всего, это связано с работой кэш памяти процессора, так как вектор хранится непрерывно.
+\newpage
+
+% Заключение
+\section*{Заключение}
+\addcontentsline{toc}{section}{Заключение}
+В ходе выполнения лабораторной работы был реализован последовательный и параллельный алгоритм Джарвиса.
+\par По данным экспериментов удалось сравнить время работы параллельного и последовательного алгоритма Джарвиса.
+\par В заключении нужно отметить, что алгоритм Джарвиса является достаточно простым в понимании и реализации. Его сложность O(n*h), где n - общее количество точек в исходном множестве точек, а h - количество точек в получившейся выпуклой оболочке, что в общем случае дает хороший результат по времени выполнения.
+\newpage
+
+% Список литературы
+\begin{thebibliography}{1}
+\addcontentsline{toc}{section}{Список литературы}
+\bibitem{algorithmica} Выпуклые оболочки - Алгоритмика. [Электронный ресурс] // URL: \url {https://algorithmica.org/ru/convex-hulls} (дата обращения: 18.03.2021)
+\end{thebibliography}
+\newpage
+
+% Приложение
+\section*{Приложение}
+\addcontentsline{toc}{section}{Приложение}
+В этом разделе находится листинг всего кода, написанного в рамках лабораторной работы.
+\par 1. Библиотека с последовательной реализацией. Файл: jarvis\_algorithm.h
+\begin{lstlisting}
+// Copyright 2021 Gogov Vladislav
+#ifndef MODULES_TASK_1_GOGOV_V_JARVIS_ALGORITHM_JARIVS_ALGORITHM_H_
+#define MODULES_TASK_1_GOGOV_V_JARVIS_ALGORITHM_JARIVS_ALGORITHM_H_
+#include <ostream>
+#include <vector>
+#include <utility>
+
+using Point = std::pair<int64_t, int64_t>;
+
+Point searchBottomLeft(const std::vector<Point>& points);
+int rotate(const Point& A, const Point& B, const Point& C);
+bool checkPointsDistances(const Point& current, const Point& next, const Point& temp);
+std::vector<Point> getRandomPoints(size_t size);
+std::vector<Point> jarvisAlgorithmSeq(const std::vector<Point>& points);
+
+#endif  // MODULES_TASK_1_GOGOV_V_JARVIS_ALGORITHM_JARIVS_ALGORITHM_H_
+\end{lstlisting}
+\par 2. Библиотека с последовательной реализацией. Файл: jarvis\_algorithm.cpp
+\begin{lstlisting}
+// Copyright 2021 Gogov Vladislav
+#include <random>
+#include "../../../modules/task_1/gogov_v_jarvis_algorithm/jarivs_algorithm.h"
+
+int rotate(const Point& A, const Point& B, const Point& C) {
+    int64_t temp = (C.first - A.first) * (B.second - A.second) -
+                    (C.second - A.second) * (B.first - A.first);
+    if (temp > 0)
+        return 1;
+    else if (temp < 0)
+        return -1;
+    else
+        return 0;
+}
+
+std::vector<Point> getRandomPoints(size_t size) {
+    if (size <= 0)
+        throw("The size cannot be zero");
+    std::random_device device;
+    std::mt19937 gen(device());
+    std::vector<Point> points(size);
+    for (size_t i = 0; i < size; i++) {
+        int64_t x = static_cast<int64_t>(gen() % 1000);
+        int64_t y = static_cast<int64_t>(gen() % 1000);
+        points[i] = Point(x, y);
+    }
+    return points;
+}
+
+Point searchBottomLeft(const std::vector<Point>& points) {
+    Point point_bottom_left = points[0];
+    for (size_t i = 1; i < points.size(); i++)
+        if (points[i] < point_bottom_left)
+            point_bottom_left = points[i];
+    return point_bottom_left;
+}
+
+bool checkPointsDistances(const Point& current, const Point& next, const Point& temp) {
+    int64_t dist_next_current =
+        (next.first - current.first) * (next.first - current.first) +
+        (next.second - current.second) * (next.second - current.second);
+    int64_t dist_temp_current =
+        (temp.first - current.first) * (temp.first - current.first) +
+        (temp.second - current.second) * (temp.second - current.second);
+    if (dist_next_current < dist_temp_current)
+        return true;
+    return false;
+}
+
+std::vector<Point> jarvisAlgorithmSeq(const std::vector<Point>& points) {
+    size_t count_points = points.size();
+    if (count_points == 0)
+        throw("It is impossible to construct a convex hull");
+    if (count_points < 2)
+        return points;
+    Point base = searchBottomLeft(points);
+    std::vector<Point> convex_hull;
+    convex_hull.push_back(base);
+    Point current = base;
+    Point next;
+    do {
+        next = current == points[0] ? points[1] : points[0];
+
+        for (size_t i = 0; i < count_points; i++) {
+            int temp = rotate(current, next, points[i]);
+            if (temp > 0) {
+                next = points[i];
+            } else if (temp == 0) {
+                if (checkPointsDistances(current, next, points[i])) {
+                    next = points[i];
+                }
+            }
+        }
+        current = next;
+        convex_hull.push_back(next);
+    } while (current != base);
+    convex_hull.pop_back();
+    return convex_hull;
+}
+\end{lstlisting}
+
+\par 3. Библиотека с последовательной реализацией. Файл: main.cpp
+\begin{lstlisting}
+// Copyright 2021 Gogov Vladislav
+#include <gtest/gtest.h>
+#include "./jarivs_algorithm.h"
+
+TEST(Sequential_Jarvis_Algorithm, jarvisAlgorithm_Cannot_Apply_Without_Points) {
+    std::vector<Point> points(0);
+    ASSERT_ANY_THROW(jarvisAlgorithm(points));
+}
+
+TEST(Sequential_Jarvis_Algorithm, jarvisAlgorithm_Can_Apply_With_One_Point) {
+    std::vector<Point> points = {Point(5, 6)};
+    std::vector<Point> convex_hull = jarvisAlgorithm(points);
+    ASSERT_EQ(points, convex_hull);
+}
+
+TEST(Sequential_Jarvis_Algorithm, jarvisAlgorithm_Can_Apply_With_Two_Points) {
+    std::vector<Point> points = {Point(2, 5), Point(5, 6)};
+    std::vector<Point> convex_hull = jarvisAlgorithm(points);
+    ASSERT_EQ(points, convex_hull);
+}
+
+TEST(Sequential_Jarvis_Algorithm, jarvisAlgorithm_Can_Apply_With_One_Line_Points) {
+    std::vector<Point> points = {Point(1, 1), Point(2, 2), Point(3, 3), Point(4, 4), Point(5, 5)};
+    std::vector<Point> convex_hull = jarvisAlgorithm(points);
+    std::vector<Point> result_convex_hull = {Point(1, 1), Point(5, 5)};
+    ASSERT_EQ(result_convex_hull, convex_hull);
+}
+
+TEST(Sequential_Jarvis_Algorithm, jarvisAlgorithm_Square_With_Points) {
+    std::vector<Point> points = {Point(0, 0), Point(25, 25), Point(34, 10), Point(0, 40), Point(10, 2), Point(40, 40),
+                                Point(15, 15), Point(40, 0), Point(5, 5)};
+    std::vector<Point> convex_hull = jarvisAlgorithm(points);
+    std::vector<Point> result_convex_hull = {Point(0, 0), Point(40, 0), Point(40, 40), Point(0, 40)};
+    ASSERT_EQ(result_convex_hull, convex_hull);
+}
+
+TEST(Sequential_Jarvis_Algorithm, jarvisAlgorithm_Can_Apply_All_Point_Convex_Hull) {
+    std::vector<Point> points = {Point(2, 5), Point(50, 10), Point(80, 30), Point(50, 50), Point(7, 25)};
+    std::vector<Point> convex_hull = jarvisAlgorithm(points);
+    std::vector<Point> result_convex_hull = points;
+    ASSERT_EQ(result_convex_hull, convex_hull);
+}
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+\end{lstlisting}
+
+\par 4. Библиотека с реализацией на OpenMP. Файл: jarvis\_algorithm.h
+\begin{lstlisting}
+// Copyright 2021 Gogov Vladislav
+// Copyright 2021 Gogov Vladislav
+#ifndef MODULES_TASK_2_GOGOV_V_JARVIS_ALGORITHM_JARIVS_ALGORITHM_H_
+#define MODULES_TASK_2_GOGOV_V_JARVIS_ALGORITHM_JARIVS_ALGORITHM_H_
+#include <omp.h>
+#include <ostream>
+#include <vector>
+#include <utility>
+
+using Point = std::pair<int64_t, int64_t>;
+
+Point searchBottomLeft(const std::vector<Point>& points);
+int rotate(const Point& A, const Point& B, const Point& C);
+bool checkPointsDistances(const Point& current, const Point& next, const Point& temp);
+std::vector<Point> getRandomPoints(size_t size);
+std::vector<Point> jarvisAlgorithmSeq(const std::vector<Point>& points);
+std::vector<Point> jarvisAlgorithmOmp(const std::vector<Point>& points);
+
+#endif  // MODULES_TASK_2_GOGOV_V_JARVIS_ALGORITHM_JARIVS_ALGORITHM_H_
+\end{lstlisting}
+
+\par 5. Библиотека с реализацией на OpenMP. Файл: jarvis\_algorithm.cpp
+\begin{lstlisting}
+// Copyright 2021 Gogov Vladislav
+#include <random>
+#include "../../../modules/task_2/gogov_v_jarvis_algorithm/jarivs_algorithm.h"
+
+int rotate(const Point& A, const Point& B, const Point& C) {
+    int64_t temp = (C.first - A.first) * (B.second - A.second) -
+                    (C.second - A.second) * (B.first - A.first);
+    if (temp > 0)
+        return 1;
+    else if (temp < 0)
+        return -1;
+    else
+        return 0;
+}
+
+std::vector<Point> getRandomPoints(size_t size) {
+    if (size <= 0)
+        throw("The size cannot be zero");
+    std::random_device device;
+    std::mt19937 gen(device());
+    std::vector<Point> points(size);
+    for (size_t i = 0; i < size; i++) {
+        int64_t x = static_cast<int64_t>(gen() % 1000);
+        int64_t y = static_cast<int64_t>(gen() % 1000);
+        points[i] = Point(x, y);
+    }
+    return points;
+}
+
+Point searchBottomLeft(const std::vector<Point>& points) {
+    Point point_bottom_left = points[0];
+    for (size_t i = 1; i < points.size(); i++)
+        if (points[i] < point_bottom_left)
+            point_bottom_left = points[i];
+    return point_bottom_left;
+}
+
+bool checkPointsDistances(const Point& current, const Point& next, const Point& temp) {
+    int64_t dist_next_current =
+        (next.first - current.first) * (next.first - current.first) +
+        (next.second - current.second) * (next.second - current.second);
+    int64_t dist_temp_current =
+        (temp.first - current.first) * (temp.first - current.first) +
+        (temp.second - current.second) * (temp.second - current.second);
+    if (dist_next_current < dist_temp_current)
+        return true;
+    return false;
+}
+
+std::vector<Point> jarvisAlgorithmSeq(const std::vector<Point>& points) {
+    size_t count_points = points.size();
+    if (count_points == 0)
+        throw("It is impossible to construct a convex hull");
+    if (count_points < 2)
+        return points;
+    Point base = searchBottomLeft(points);
+    std::vector<Point> convex_hull;
+    convex_hull.push_back(base);
+    Point current = base;
+    Point next;
+    do {
+        next = current == points[0] ? points[1] : points[0];
+
+        for (size_t i = 0; i < count_points; i++) {
+            int temp = rotate(current, next, points[i]);
+            if (temp > 0) {
+                next = points[i];
+            } else if (temp == 0) {
+                if (checkPointsDistances(current, next, points[i])) {
+                    next = points[i];
+                }
+            }
+        }
+        current = next;
+        convex_hull.push_back(next);
+    } while (current != base);
+    convex_hull.pop_back();
+    return convex_hull;
+}
+
+std::vector<Point> jarvisAlgorithmOmp(const std::vector<Point>& points) {
+    int count_points = static_cast<int>(points.size());
+    if (count_points == 0)
+        throw("It is impossible to construct a convex hull");
+    if (count_points < 2)
+        return points;
+
+    Point base = points[0];
+#pragma omp parallel shared(points)
+    {
+        Point local_base(base);
+#pragma omp for
+        for (int i = 1; i < count_points; i++) {
+            if (points[i] < local_base)
+                local_base = points[i];
+        }
+#pragma omp critical
+        {
+            if (local_base < base)
+                base = local_base;
+        }
+    }
+    std::vector<Point> convex_hull;
+    convex_hull.push_back(base);
+    Point current = base;
+    Point next;
+    do {
+        next = current == points[0] ? points[1] : points[0];
+#pragma omp parallel shared(points)
+        {
+            Point local_next = next;
+#pragma omp for
+            for (int i = 0; i < count_points; i++) {
+                int temp = rotate(current, local_next, points[i]);
+                if (temp > 0) {
+                    local_next = points[i];
+                } else if (temp == 0) {
+                    if (checkPointsDistances(current, local_next, points[i])) {
+                        local_next = points[i];
+                    }
+                }
+            }
+#pragma omp critical
+            {
+                int temp = rotate(current, next, local_next);
+                if (temp > 0) {
+                    next = local_next;
+                } else if (temp == 0) {
+                    if (checkPointsDistances(current, next, local_next)) {
+                        next = local_next;
+                    }
+                }
+            }
+        }
+        current = next;
+        convex_hull.push_back(next);
+    } while (current != base);
+    convex_hull.pop_back();
+    return convex_hull;
+}
+\end{lstlisting}
+
+\par 6. Библиотека с реализацией на OpenMP. Файл: main.cpp
+\begin{lstlisting}
+// Copyright 2021 Gogov Vladislav
+#include <gtest/gtest.h>
+#include "./jarivs_algorithm.h"
+
+TEST(OpenMP_Jarvis_Algorithm, Jarvis_Algorithm_Cannot_Apply_Without_Points) {
+    std::vector<Point> points(0);
+    ASSERT_ANY_THROW(jarvisAlgorithmOmp(points));
+}
+
+TEST(OpenMP_Jarvis_Algorithm, Jarvis_Algorithm_Can_Apply_With_One_Point) {
+    std::vector<Point> points = {Point(5, 6)};
+    std::vector<Point> convex_hull_seq = jarvisAlgorithmSeq(points);
+    std::vector<Point> convex_hull_omp = jarvisAlgorithmOmp(points);
+    ASSERT_EQ(convex_hull_seq, convex_hull_omp);
+}
+
+TEST(OpenMP_Jarvis_Algorithm, Jarvis_Algorithm_Can_Apply_With_Two_Points) {
+    std::vector<Point> points = {Point(2, 5), Point(5, 6)};
+    std::vector<Point> convex_hull_seq = jarvisAlgorithmSeq(points);
+    std::vector<Point> convex_hull_omp = jarvisAlgorithmOmp(points);
+    ASSERT_EQ(convex_hull_seq, convex_hull_omp);
+}
+
+TEST(OpenMP_Jarvis_Algorithm, Jarvis_Algorithm_Can_Apply_With_One_Line_Points) {
+    std::vector<Point> points = {Point(1, 1), Point(2, 2), Point(3, 3), Point(4, 4), Point(5, 5)};
+    std::vector<Point> convex_hull_seq = jarvisAlgorithmSeq(points);
+    std::vector<Point> convex_hull_omp = jarvisAlgorithmOmp(points);
+    ASSERT_EQ(convex_hull_seq, convex_hull_omp);
+}
+
+TEST(OpenMP_Jarvis_Algorithm, Jarvis_Algorithm_Square_With_Points) {
+    std::vector<Point> points = {Point(0, 0),   Point(25, 25), Point(34, 10),
+                                 Point(0, 40),  Point(10, 2),  Point(40, 40),
+                                 Point(15, 15), Point(40, 0),  Point(5, 5)};
+    std::vector<Point> convex_hull_seq = jarvisAlgorithmSeq(points);
+    std::vector<Point> convex_hull_omp = jarvisAlgorithmOmp(points);
+    ASSERT_EQ(convex_hull_seq, convex_hull_omp);
+}
+
+TEST(OpenMP_Jarvis_Algorithm, Jarvis_Algorithm_Can_Apply_All_Point_Convex_Hull) {
+    std::vector<Point> points = {Point(2, 5), Point(50, 10), Point(80, 30), Point(50, 50), Point(7, 25)};
+    std::vector<Point> convex_hull_seq = jarvisAlgorithmSeq(points);
+    std::vector<Point> convex_hull_omp = jarvisAlgorithmOmp(points);
+    ASSERT_EQ(convex_hull_seq, convex_hull_omp);
+}
+
+TEST(OpenMP_Jarvis_Algorithm, Jarvis_Algorithm_With_Size_102) {
+    size_t count_point = 102ull;
+    std::vector<Point> points = getRandomPoints(count_point);
+    std::vector<Point> convex_hul_seq = jarvisAlgorithmSeq(points);
+    std::vector<Point> convex_hul_omp = jarvisAlgorithmOmp(points);
+    ASSERT_EQ(convex_hul_seq, convex_hul_omp);
+}
+
+TEST(OpenMP_Jarvis_Algorithm, Jarvis_Algorithm_With_Size_111) {
+    size_t count_point = 111ull;
+    std::vector<Point> points = getRandomPoints(count_point);
+    std::vector<Point> convex_hul_seq = jarvisAlgorithmSeq(points);
+    std::vector<Point> convex_hul_omp = jarvisAlgorithmOmp(points);
+    ASSERT_EQ(convex_hul_seq, convex_hul_omp);
+}
+\end{lstlisting}
+
+\par 7. Библиотека с реализацией на TBB. Файл: jarvis\_algorithm.h
+\begin{lstlisting}
+// Copyright 2021 Gogov Vladislav
+#ifndef MODULES_TASK_3_GOGOV_V_JARVIS_ALGORITHM_JARIVS_ALGORITHM_H_
+#define MODULES_TASK_3_GOGOV_V_JARVIS_ALGORITHM_JARIVS_ALGORITHM_H_
+#include <tbb/tbb.h>
+#include <vector>
+#include <utility>
+
+using Point = std::pair<int64_t, int64_t>;
+
+Point searchBottomLeft(const std::vector<Point>& points);
+int rotate(const Point& A, const Point& B, const Point& C);
+bool checkPointsDistances(const Point& current, const Point& next, const Point& temp);
+std::vector<Point> getRandomPoints(size_t size);
+std::vector<Point> jarvisAlgorithmSeq(const std::vector<Point>& points);
+std::vector<Point> jarvisAlgorithmTbb(const std::vector<Point>& points);
+
+#endif  // MODULES_TASK_3_GOGOV_V_JARVIS_ALGORITHM_JARIVS_ALGORITHM_H_
+\end{lstlisting}
+
+\par 8. Библиотека с реализацией на TBB. Файл: jarvis\_algorithm.cpp
+\begin{lstlisting}
+// Copyright 2021 Gogov Vladislav
+#include <random>
+#include <ostream>
+#include "../../../modules/task_3/gogov_v_jarvis_algorithm/jarivs_algorithm.h"
+
+int rotate(const Point& A, const Point& B, const Point& C) {
+    int64_t temp = (C.first - A.first) * (B.second - A.second) - (C.second - A.second) * (B.first - A.first);
+    if (temp > 0)
+        return 1;
+    else if (temp < 0)
+        return -1;
+    else
+        return 0;
+}
+
+std::vector<Point> getRandomPoints(size_t size) {
+    if (size <= 0)
+        throw("The size cannot be zero");
+    std::random_device device;
+    std::mt19937 gen(device());
+    std::vector<Point> points(size);
+    for (size_t i = 0; i < size; i++) {
+        int64_t x = static_cast<int64_t>(gen() % 1000ull);
+        int64_t y = static_cast<int64_t>(gen() % 1000ull);
+        points[i] = Point(x, y);
+    }
+    return points;
+}
+
+Point searchBottomLeft(const std::vector<Point>& points) {
+    Point point_bottom_left = points[0];
+    for (size_t i = 1; i < points.size(); i++)
+        if (points[i] < point_bottom_left)
+            point_bottom_left = points[i];
+    return point_bottom_left;
+}
+
+bool checkPointsDistances(const Point& current, const Point& next, const Point& temp) {
+    int64_t dist_nefirstt_current = (next.first - current.first) * (next.first - current.first) +
+                                   (next.second - current.second) * (next.second - current.second);
+    int64_t dist_temp_current = (temp.first - current.first) * (temp.first - current.first) +
+                               (temp.second - current.second) * (temp.second - current.second);
+    if (dist_nefirstt_current < dist_temp_current)
+        return true;
+    return false;
+}
+
+std::vector<Point> jarvisAlgorithmSeq(const std::vector<Point>& points) {
+    size_t count_points = points.size();
+    if (count_points == 0)
+        throw("It is impossible to construct a convex hull");
+    if (count_points < 2)
+        return points;
+    Point base = searchBottomLeft(points);
+    std::vector<Point> convex_hull;
+    convex_hull.push_back(base);
+    Point current = base;
+    Point next;
+    do {
+        next = current == points[0] ? points[1] : points[0];
+
+        for (size_t i = 0; i < count_points; i++) {
+            int temp = rotate(current, next, points[i]);
+            if (temp > 0) {
+                next = points[i];
+            } else if (temp == 0) {
+                if (checkPointsDistances(current, next, points[i])) {
+                    next = points[i];
+                }
+            }
+        }
+        current = next;
+        convex_hull.push_back(next);
+    } while (current != base);
+    convex_hull.pop_back();
+    return convex_hull;
+}
+
+std::vector<Point> jarvisAlgorithmTbb(const std::vector<Point>& points) {
+    int count_points = static_cast<int>(points.size());
+    if (count_points == 0)
+        throw("It is impossible to construct a convex hull");
+    if (count_points < 2)
+        return points;
+
+    Point base = tbb::parallel_reduce(
+        tbb::blocked_range<size_t>(1, count_points),
+        points[0],
+        [&points] (tbb::blocked_range<size_t>& r, Point local_base) -> Point {
+            auto begin = r.begin(), end = r.end();
+            for (auto i = begin; i != end; i++) {
+                if (points[i] < local_base)
+                    local_base = points[i];
+            }
+            return local_base;
+        },
+        [] (const Point& a, const Point& b) -> Point {
+            return a < b ? a : b;
+        });
+
+    std::vector<Point> convex_hull;
+    convex_hull.push_back(base);
+    Point current = base;
+    Point next;
+    do {
+        next = current == points[0] ? points[1] : points[0];
+
+        current = tbb::parallel_reduce(
+            tbb::blocked_range<size_t>(0, count_points),
+            next,
+            [&current, &points] (tbb::blocked_range<size_t>& r, Point local_next) -> Point {
+                auto begin = r.begin(), end = r.end();
+                for (auto i = begin; i != end; i++) {
+                    int temp = rotate(current, local_next, points[i]);
+                    if (temp > 0) {
+                        local_next = points[i];
+                    } else if (temp == 0) {
+                        if (checkPointsDistances(current, local_next, points[i]))
+                            local_next = points[i];
+                    }
+                }
+                return local_next;
+            },
+            [&current] (const Point& next, const Point& local_next) -> Point {
+                int temp = rotate(current, next, local_next);
+                if (temp > 0) {
+                    return local_next;
+                } else if (temp == 0) {
+                    if (checkPointsDistances(current, next, local_next))
+                        return local_next;
+                }
+                return next;
+            });
+
+        next = current;
+        convex_hull.push_back(next);
+    } while (current != base);
+    convex_hull.pop_back();
+    return convex_hull;
+}
+\end{lstlisting}
+
+\par 9. Библиотека с реализацией на TBB. Файл: main.cpp
+\begin{lstlisting}
+// Copyright 2021 Gogov Vladislav
+#include <gtest/gtest.h>
+#include "tbb/tick_count.h"
+#include "./jarivs_algorithm.h"
+
+TEST(TBB_Jarvis_Algorithm, Jarvis_Algorithm_Cannot_Apply_Without_Points) {
+    std::vector<Point> points(0);
+    ASSERT_ANY_THROW(jarvisAlgorithmTbb(points));
+}
+
+TEST(TBB_Jarvis_Algorithm, Jarvis_Algorithm_Can_Apply_With_One_Point) {
+    std::vector<Point> points{Point(5, 6)};
+    std::vector<Point> convex_hull_seq = jarvisAlgorithmSeq(points);
+    std::vector<Point> convex_hull_tbb = jarvisAlgorithmTbb(points);
+    ASSERT_EQ(convex_hull_seq, convex_hull_tbb);
+}
+
+TEST(TBB_Jarvis_Algorithm, Jarvis_Algorithm_Can_Apply_With_Two_Points) {
+    std::vector<Point> points{Point(2, 5), Point(5, 6)};
+    std::vector<Point> convex_hull_seq = jarvisAlgorithmSeq(points);
+    std::vector<Point> convex_hull_tbb = jarvisAlgorithmTbb(points);
+    ASSERT_EQ(convex_hull_seq, convex_hull_tbb);
+}
+
+TEST(TBB_Jarvis_Algorithm, Jarvis_Algorithm_Can_Apply_With_One_Line_Points) {
+    std::vector<Point> points{Point(1, 1), Point(2, 2), Point(3, 3), Point(4, 4), Point(5, 5)};
+    std::vector<Point> convex_hull_seq = jarvisAlgorithmSeq(points);
+    std::vector<Point> convex_hull_tbb = jarvisAlgorithmTbb(points);
+    ASSERT_EQ(convex_hull_seq, convex_hull_tbb);
+}
+
+TEST(TBB_Jarvis_Algorithm, Jarvis_Algorithm_Square_With_Points) {
+    std::vector<Point> points{Point(0, 0),   Point(25, 25), Point(34, 10), Point(0, 40), Point(10, 2),
+                              Point(40, 40), Point(15, 15), Point(40, 0),  Point(5, 5)};
+    std::vector<Point> convex_hull_seq = jarvisAlgorithmSeq(points);
+    std::vector<Point> convex_hull_tbb = jarvisAlgorithmTbb(points);
+    ASSERT_EQ(convex_hull_seq, convex_hull_tbb);
+}
+
+TEST(TBB_Jarvis_Algorithm, Jarvis_Algorithm_Can_Apply_All_Point_Convex_Hull) {
+    std::vector<Point> points{Point(2, 5), Point(50, 10), Point(80, 30), Point(50, 50), Point(7, 25)};
+    std::vector<Point> convex_hull_seq = jarvisAlgorithmSeq(points);
+    std::vector<Point> convex_hull_tbb = jarvisAlgorithmTbb(points);
+    ASSERT_EQ(convex_hull_seq, convex_hull_tbb);
+}
+
+TEST(TBB_Jarvis_Algorithm, Jarvis_Algorithm_With_Size_102) {
+    size_t count_point = 102ull;
+    std::vector<Point> points = getRandomPoints(count_point);
+    std::vector<Point> convex_hul_seq = jarvisAlgorithmSeq(points);
+    std::vector<Point> convex_hul_tbb = jarvisAlgorithmTbb(points);
+    ASSERT_EQ(convex_hul_seq, convex_hul_tbb);
+}
+
+TEST(TBB_Jarvis_Algorithm, Jarvis_Algorithm_With_Size_111) {
+    size_t count_point = 111ull;
+    std::vector<Point> points = getRandomPoints(count_point);
+    std::vector<Point> convex_hul_seq = jarvisAlgorithmSeq(points);
+    std::vector<Point> convex_hul_tbb = jarvisAlgorithmTbb(points);
+    ASSERT_EQ(convex_hul_seq, convex_hul_tbb);
+}
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+\end{lstlisting}
+
+
+\end{document}
